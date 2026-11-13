@@ -2095,12 +2095,38 @@ function zxInit(){
   $('tabQ').addEventListener('click',function(){qDel=null; showTab('q'); try{$('sQ').focus()}catch(e){}});
   $('tabMag').addEventListener('click',function(){magDel=''; showTab('mag')});
 
-load();
-loadList();
-magLoad();
-renderCompanies();
-refresh();
-startWatch();
+function mesurer(nom, fonction) {
+  var debut = performance.now();
+
+  try {
+    var resultat = fonction();
+
+    if (resultat && typeof resultat.then === 'function') {
+      return resultat.then(function(v) {
+        console.log('⏱ ' + nom + ' : ' +
+          (performance.now() - debut).toFixed(0) + ' ms');
+        return v;
+      }).catch(function(e) {
+        console.error('Erreur ' + nom, e);
+        throw e;
+      });
+    }
+
+    console.log('⏱ ' + nom + ' : ' +
+      (performance.now() - debut).toFixed(0) + ' ms');
+
+    return resultat;
+  } catch(e) {
+    console.error('Erreur ' + nom, e);
+  }
+}
+
+mesurer('load - enregistrements', load);
+mesurer('loadList - liste abonnés', loadList);
+mesurer('magLoad - magasin', magLoad);
+mesurer('renderCompanies - entreprises', renderCompanies);
+mesurer('refresh - actualisation', refresh);
+mesurer('startWatch - GPS', startWatch);
 })();
 </script>
 </body>
