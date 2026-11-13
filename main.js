@@ -14,7 +14,15 @@ const largeFile = 'PoseCO_Liste_Abonnes.xlsx';
 const largeSheet = 'BaseComplete';
 
 function dataDir() {
-  // Portable build: keep user data beside the EXE, never inside app.asar.
+  // Dossier réel du fichier EXE portable
+  const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+
+  // En mode portable, les données restent à côté du véritable EXE
+  if (portableDir) {
+    return path.join(portableDir, 'Donnees');
+  }
+
+  // Mode développement ou lancement non portable
   return path.join(path.dirname(app.getPath('exe')), 'Donnees');
 }
 function ensureDir() { fs.mkdirSync(dataDir(), { recursive: true }); }
