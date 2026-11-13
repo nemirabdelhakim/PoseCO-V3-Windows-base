@@ -274,6 +274,38 @@ function getItem(key) {
   throw new Error('Clé de stockage inconnue : ' + key);
 }
 
+function getListAsync() {
+  const file = fileFor('poseCO_list_v1');
+
+  if (!fs.existsSync(file)) {
+    return {
+      name: '',
+      date: '',
+      refs: []
+    };
+  }
+
+  const wb = readBook(file);
+
+  const meta = readJsonSheet(
+    wb.Sheets.ListeMeta,
+    false
+  ) || {};
+
+  const refs = readJsonSheet(
+    wb.Sheets.References,
+    true
+  );
+
+  console.log('Liste abonnés chargée :', refs.length);
+
+  return {
+    name: meta.name || '',
+    date: meta.date || '',
+    refs: refs
+  };
+}
+
 function getRecordsAsync() {
   const file = fileFor('poseCO_records_v1');
 
@@ -531,6 +563,11 @@ ipcMain.handle('poseco:set-large', async (_event, key, value) => {
 ipcMain.handle('poseco:get-records', async () => {
   return getRecordsAsync();
 });
+
+ipcMain.handle('poseco:get-list', async () => {
+  return getListAsync();
+});
+
 // ==================================================
 // FENETRE PRINCIPALE
 // ==================================================
