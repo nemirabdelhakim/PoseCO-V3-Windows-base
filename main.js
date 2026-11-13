@@ -179,21 +179,53 @@ function readJsonSheet(ws, isArray) {
 }
 function getItem(key) {
   const file = fileFor(key);
+
   if (!fs.existsSync(file)) return null;
+
+  // Lecture rapide des enregistrements depuis le cache JSON
+  if (key === 'poseCO_records_v1') {
+    const cached = readRecordsCache(file);
+
+    if (cached !== null) {
+      return cached;
+    }
+  }
+
+  // Lecture Excel normale si le cache est absent ou périmé
   const wb = readBook(file);
-  if (key === 'poseCO_records_v1') return JSON.stringify(readJsonSheet(wb.Sheets.Enregistrements, true));
+
+  if (key === 'poseCO_records_v1') {
+    const raw = JSON.stringify(
+      readJsonSheet(wb.Sheets.Enregistrements, true)
+    );
+
+    // Création automatique du cache
+    writeRecordsCache(file, raw);
+
+    return raw;
+  }
+
   if (key === 'poseCO_mag_v1') {
     return JSON.stringify({
       entrees: readJsonSheet(wb.Sheets.Entrees, true),
       sorties: readJsonSheet(wb.Sheets.Sorties, true)
     });
   }
+
   if (key === 'poseCO_list_v1') {
     const meta = readJsonSheet(wb.Sheets.ListeMeta, false) || {};
     const refs = readJsonSheet(wb.Sheets.References, true);
-    return JSON.stringify({ name: meta.name || '', date: meta.date || '', refs: refs });
+
+    return JSON.stringify({
+      name: meta.name || '',
+      date: meta.date || '',
+      refs: refs
+    });
   }
-  return JSON.stringify(readJsonSheet(wb.Sheets.Parametres, false) || {});
+
+  return JSON.stringify(
+    readJsonSheet(wb.Sheets.Parametres, false) || {}
+  );
 }
 function setItem(key, raw) {
   const file = fileFor(key);
@@ -215,7 +247,15 @@ function setItem(key, raw) {
     wb.Sheets.Parametres = XLSX.utils.json_to_sheet([{ Cle: 'valeur', Donnee_JSON: JSON.stringify(value || {}) }]);
     if (!wb.SheetNames.includes('Parametres')) wb.SheetNames.push('Parametres');
   }
-  writeBookAtomic(file, wb);
+writeBookAtomic(file, wb);
+
+// Synchroniser le cache après chaque modification
+if (key === 'poseCO_records_v1') {
+  const cacheRaw = JSON.stringify(
+    Array.isArray(value) ? value : []
+  );
+
+  writeRecordsCache(file, cacheRaw);
 }
 function removeItem(key) {
   const file = fileFor(key);
@@ -223,6 +263,18 @@ function removeItem(key) {
   if (fs.existsSync(file)) {
     fs.unlinkSync(file);
   }
+
+  bookCache.delete(file);
+
+  // Supprimer également le cache des enregistrements
+  if (key === 'poseCO_records_v1') {
+    const cache = recordsCacheFile(file);
+
+    if (fs.existsSync(cache)) {
+      fs.unlinkSync(cache);
+    }
+  }
+}
 
   // Supprimer aussi le classeur du cache
   bookCache.delete(file);
