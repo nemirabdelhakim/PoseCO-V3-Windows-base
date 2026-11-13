@@ -18,4 +18,5 @@ contextBridge.exposeInMainWorld('poseCOExcel', {
   setLarge: (key, value) => ipcRenderer.invoke('poseco:set-large', key, value),
 
   getRecords: () => ipcRenderer.invoke('poseco:get-records')
+  getList: () => ipcRenderer.invoke('poseco:get-list'),
 });
