@@ -1,0 +1,30 @@
+{
+  "name": "pose-co-v3-windows",
+  "version": "3.0.0",
+  "private": true,
+  "description": "Pose CO - gestion des poses de détecteurs CO Sonelgaz",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win portable --x64",
+    "postinstall": "node scripts/copy-libs.cjs"
+  },
+  "dependencies": {
+    "xlsx": "0.18.5",
+    "html5-qrcode": "2.3.8",
+    "jsbarcode": "3.11.6"
+  },
+  "devDependencies": {
+    "electron": "22.3.27",
+    "electron-builder": "24.13.3"
+  },
+  "build": {
+    "appId": "dz.sonelgaz.poseco",
+    "productName": "Pose CO V3",
+    "asar": true,
+    "directories": { "output": "release" },
+    "files": ["main.js", "preload.js", "src/**/*", "libs/**/*", "package.json", "node_modules/xlsx/**/*"],
+    "win": { "target": [{ "target": "portable", "arch": ["x64"] }], "artifactName": "Pose-CO-V3-Windows7-SP1-x64.${ext}" },
+    "electronVersion": "22.3.27"
+  }
+}
