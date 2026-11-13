@@ -13,6 +13,7 @@
     "xlsx": "0.18.5",
     "html5-qrcode": "2.3.8",
     "jsbarcode": "3.11.6"
+    "@sec-ant/zxing-wasm": "1.2.0"
   },
   "devDependencies": {
     "electron": "22.3.27",
