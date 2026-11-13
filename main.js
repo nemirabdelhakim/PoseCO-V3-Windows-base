@@ -27,6 +27,7 @@ function dataDir() {
   // Mode développement ou lancement non portable
   return path.join(path.dirname(app.getPath('exe')), 'Donnees');
 }
+console.log('📁 DOSSIER DONNEES :', dataDir());
 function ensureDir() { fs.mkdirSync(dataDir(), { recursive: true }); }
 function fileFor(key) {
   const name = KEY_FILES[key];
