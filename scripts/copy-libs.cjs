@@ -1,4 +1,3 @@
-
 const fs = require('fs');
 const path = require('path');
 
@@ -8,7 +7,8 @@ const files = [
   ['node_modules/xlsx/dist/xlsx.full.min.js', 'libs/xlsx.full.min.js'],
   ['node_modules/html5-qrcode/html5-qrcode.min.js', 'libs/html5-qrcode.min.js'],
   ['node_modules/jsbarcode/dist/JsBarcode.all.min.js', 'libs/JsBarcode.all.min.js'],
-  ['node_modules/@sec-ant/zxing-wasm/package.json', 'libs/zxing_package.json']
+  ['node_modules/zxing-wasm/dist/iife/reader/index.js', 'libs/zxing_reader.js'],
+  ['node_modules/zxing-wasm/dist/reader/zxing_reader.wasm', 'libs/zxing_reader.wasm']
 ];
 
 fs.mkdirSync(path.join(root, 'libs'), { recursive: true });
@@ -18,11 +18,12 @@ for (const [src, dest] of files) {
   const to = path.join(root, dest);
 
   if (!fs.existsSync(from)) {
-    throw new Error('Fichier introuvable : ' + src);
+    throw new Error('Bibliothèque introuvable : ' + src);
   }
 
   fs.mkdirSync(path.dirname(to), { recursive: true });
   fs.copyFileSync(from, to);
+
   console.log('Copié : ' + dest);
 }
 
