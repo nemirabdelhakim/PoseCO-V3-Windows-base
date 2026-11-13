@@ -1,4 +1,3 @@
-
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('poseCOExcel', {
@@ -15,8 +14,10 @@ contextBridge.exposeInMainWorld('poseCOExcel', {
   },
 
   getLarge: key => ipcRenderer.invoke('poseco:get-large', key),
-  setLarge: (key, value) => ipcRenderer.invoke('poseco:set-large', key, value),
 
-  getRecords: () => ipcRenderer.invoke('poseco:get-records')
-  getList: () => ipcRenderer.invoke('poseco:get-list'),
+  setLarge: (key, value) => ipcRenderer.invoke('poseco:set-large', key),
+
+  getRecords: () => ipcRenderer.invoke('poseco:get-records'),
+
+  getList: () => ipcRenderer.invoke('poseco:get-list')
 });
