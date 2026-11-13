@@ -274,6 +274,18 @@ function getItem(key) {
   throw new Error('Clé de stockage inconnue : ' + key);
 }
 
+function getRecordsAsync() {
+  const file = fileFor('poseCO_records_v1');
+
+  if (!fs.existsSync(file)) return [];
+
+  const wb = readBook(file);
+
+  return readJsonSheet(
+    wb.Sheets.Enregistrements,
+    true
+  );
+}
 // ==================================================
 // ENREGISTREMENT DES DONNEES
 // ==================================================
@@ -516,7 +528,9 @@ ipcMain.handle('poseco:get-large', async (_event, key) => {
 ipcMain.handle('poseco:set-large', async (_event, key, value) => {
   return setLarge(key, value);
 });
-
+ipcMain.handle('poseco:get-records', async () => {
+  return getRecordsAsync();
+});
 // ==================================================
 // FENETRE PRINCIPALE
 // ==================================================
