@@ -1912,21 +1912,73 @@ function loadList(){
   /* ---------- lecture des QR denses (cartons) avec zxing-wasm ---------- */
   var zxP=null, wasmState=null;
   var ZX_BIN=['LocalAverage','FixedThreshold','GlobalHistogram'];
-  function zxInit(){
+function zxInit(){
     if(zxP) return zxP;
-    zxP=new Promise(function(res,rej){
-      if(!window.ZXingWASM){rej(new Error('lecteur absent'));return}
-      function go(bytes){try{ZXingWASM.setZXingModuleOverrides({wasmBinary:bytes});res(ZXingWASM)}catch(e){rej(e)}}
-      if(window.ZXING_WASM_B64){
-        var bin=atob(window.ZXING_WASM_B64), u=new Uint8Array(bin.length);
-        for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
-        go(u);
-      }else{
-        fetch('../libs/zxing_reader.wasm').then(function(r){if(!r.ok) throw new Error('wasm');return r.arrayBuffer()}).then(function(b){go(new Uint8Array(b))}).catch(rej);
-      }
-    }).catch(function(e){zxP=null;throw e});
+
+    zxP = new Promise(function(res, rej){
+
+        if(!window.ZXingWASM){
+            rej(new Error('Lecteur ZXing absent : vérifier libs/zxing_reader.js'));
+            return;
+        }
+
+        if(typeof window.ZXingWASM.setZXingModuleOverrides !== 'function'){
+            rej(new Error('API ZXing incompatible avec la version installée'));
+            return;
+        }
+
+        function go(bytes){
+            try {
+                var wasmBuffer = bytes.buffer.slice(
+                    bytes.byteOffset,
+                    bytes.byteOffset + bytes.byteLength
+                );
+
+                window.ZXingWASM.setZXingModuleOverrides({
+                    wasmBinary: wasmBuffer
+                });
+
+                res(window.ZXingWASM);
+
+            } catch(e) {
+                rej(e);
+            }
+        }
+
+        if(window.ZXING_WASM_B64){
+            try {
+                var bin = atob(window.ZXING_WASM_B64);
+                var u = new Uint8Array(bin.length);
+
+                for(var i = 0; i < bin.length; i++){
+                    u[i] = bin.charCodeAt(i);
+                }
+
+                go(u);
+            } catch(e) {
+                rej(e);
+            }
+
+        } else {
+            fetch('../libs/zxing_reader.wasm')
+                .then(function(r){
+                    if(!r.ok) throw new Error('Fichier WASM introuvable');
+                    return r.arrayBuffer();
+                })
+                .then(function(b){
+                    go(new Uint8Array(b));
+                })
+                .catch(rej);
+        }
+
+    }).catch(function(e){
+        zxP = null;
+        console.error('Erreur initialisation ZXing :', e);
+        throw e;
+    });
+
     return zxP;
-  }
+}
   function zxRead(Z,imgData,bin){
     return Z.readBarcodes(imgData,{formats:['QRCode','DataMatrix'],tryHarder:true,tryRotate:true,tryInvert:true,tryDownscale:true,maxNumberOfSymbols:1,binarizer:bin});
   }
