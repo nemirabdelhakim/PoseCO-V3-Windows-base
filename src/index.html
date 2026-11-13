@@ -390,11 +390,50 @@ textarea.fld{font-family:Consolas,"Courier New",monospace;font-size:13px;resize:
   var records=[], companies=[], sel={}, editingId=null, lastPos=null, lastRef='', curNeed=false, curFlags={dup:false,inList:false}, listRefs=[], listNk=[], listLen=0, listVer=0, listQn=[], listFull=null, listKeys=new Set(), listName='', listDate='', pend=null, watchId=null, scanner=null, scanTarget=null, busy=false;
 
   /* ---------- stockage ---------- */
-  function load(){
-    $('gpsOn').checked=(window.POSECO_GPS_DEFAULT!==false);
-    try{var r=localStorage.getItem(KEY); if(r) records=JSON.parse(r)||[];}catch(e){records=[]}
-    try{var s=JSON.parse(localStorage.getItem(SKEY)||'{}'); if(s.rx) $('rx').value=s.rx; if(s.chain===false) $('chain').checked=false; if(s.companies&&s.companies.length) companies=s.companies; if(s.ent) $('ent').value=s.ent; if(typeof s.gps==='boolean') $('gpsOn').checked=s.gps;}catch(e){}
-  }
+function load(){
+    var t0 = performance.now();
+    var r = null;
+
+    $('gpsOn').checked = (window.POSECO_GPS_DEFAULT !== false);
+
+    try {
+        r = localStorage.getItem(KEY);
+        console.log('⏱ load - lecture Excel :',
+            (performance.now()-t0).toFixed(0), 'ms');
+
+        var t1 = performance.now();
+
+        if(r) records = JSON.parse(r) || [];
+
+        console.log('⏱ load - JSON.parse :',
+            (performance.now()-t1).toFixed(0), 'ms');
+
+    } catch(e) {
+        records = [];
+        console.error('Erreur chargement enregistrements', e);
+    }
+
+    var t2 = performance.now();
+
+    try {
+        var s = JSON.parse(localStorage.getItem(SKEY) || '{}');
+
+        if(s.rx) $('rx').value = s.rx;
+        if(s.chain === false) $('chain').checked = false;
+        if(s.companies && s.companies.length) companies = s.companies;
+        if(s.ent) $('ent').value = s.ent;
+        if(typeof s.gps === 'boolean') $('gpsOn').checked = s.gps;
+
+    } catch(e) {}
+
+    console.log('⏱ load - paramètres :',
+        (performance.now()-t2).toFixed(0), 'ms');
+
+    console.log('⏱ load - total :',
+        (performance.now()-t0).toFixed(0), 'ms');
+
+    console.log('📦 Nombre enregistrements :', records.length);
+}
   function persist(){magCache=null;magStatsCache=null;rmCache=null;try{localStorage.setItem(KEY,JSON.stringify(records))}catch(e){toast('Stockage indisponible : exportez avant de quitter')}}
   function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify({rx:$('rx').value,chain:$('chain').checked,companies:companies,ent:$('ent').value,gps:$('gpsOn').checked}))}catch(e){}}
   $('rx').addEventListener('change',saveSettings); $('chain').addEventListener('change',saveSettings);
