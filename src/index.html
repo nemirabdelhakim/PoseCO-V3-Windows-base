@@ -431,9 +431,10 @@ function load() {
 
             console.log('📦 Nombre enregistrements :', records.length);
 
-            // Actualiser les éléments qui dépendent des enregistrements
-            if (typeof renderRecords === 'function') {
-                renderRecords();
+           // Actualiser les éléments après chargement
+refresh();
+
+console.log('✅ Enregistrements disponibles :', records.length);
             }
 
         }).catch(function(e) {
