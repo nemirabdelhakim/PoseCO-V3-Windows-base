@@ -415,39 +415,35 @@ function load() {
     console.log('⏱ Interface initialisée :',
         (performance.now() - t0).toFixed(0), 'ms');
 
-    setTimeout(function() {
-        if (!window.poseCOExcel || !window.poseCOExcel.getRecords) {
-            console.error('Lecture asynchrone Excel indisponible');
-            return;
-        }
 
-        var t1 = performance.now();
-
-        window.poseCOExcel.getRecords().then(function(data) {
-            records = Array.isArray(data) ? data : [];
-          recordsLoaded = true;
-
-            console.log('⏱ Chargement arrière-plan :',
-                (performance.now() - t1).toFixed(0), 'ms');
-
-            console.log('📦 Nombre enregistrements :', records.length);
-
-           // Actualiser les éléments après chargement
-refresh();
-
-console.log('✅ Enregistrements disponibles :', records.length);
-            }
-
-        }).catch(function(e) {
-            console.error('Erreur chargement arrière-plan :', e);
-        });
-    }, 100);
-}
-  function persist(){
-    if (!recordsLoaded) {
-        toast('Veuillez attendre le chargement des données');
+setTimeout(function() {
+    if (!window.poseCOExcel || !window.poseCOExcel.getRecords) {
+        console.error('Lecture asynchrone Excel indisponible');
         return;
     }
+
+    var t1 = performance.now();
+
+    window.poseCOExcel.getRecords().then(function(data) {
+        records = Array.isArray(data) ? data : [];
+        recordsLoaded = true;
+
+        console.log('⏱ Chargement arrière-plan :',
+            (performance.now() - t1).toFixed(0), 'ms');
+
+        console.log('📦 Nombre enregistrements :', records.length);
+
+        // Actualiser les éléments après chargement
+        refresh();
+
+        console.log('✅ Enregistrements disponibles :', records.length);
+
+    }).catch(function(e) {
+        console.error('Erreur chargement arrière-plan :', e);
+    });
+
+}, 100);
+}
 
     magCache=null;
     magStatsCache=null;
@@ -459,7 +455,24 @@ console.log('✅ Enregistrements disponibles :', records.length);
         toast('Stockage indisponible : exportez avant de quitter');
     }
 }
-  function persist(){magCache=null;magStatsCache=null;rmCache=null;try{localStorage.setItem(KEY,JSON.stringify(records))}catch(e){toast('Stockage indisponible : exportez avant de quitter')}}
+  
+function persist(){
+    if (!recordsLoaded) {
+        toast('Veuillez attendre le chargement des données');
+        return;
+    }
+
+    magCache = null;
+    magStatsCache = null;
+    rmCache = null;
+
+    try {
+        localStorage.setItem(KEY, JSON.stringify(records));
+    } catch(e) {
+        toast('Stockage indisponible : exportez avant de quitter');
+    }
+}
+
   function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify({rx:$('rx').value,chain:$('chain').checked,companies:companies,ent:$('ent').value,gps:$('gpsOn').checked}))}catch(e){}}
   $('rx').addEventListener('change',saveSettings); $('chain').addEventListener('change',saveSettings);
 
