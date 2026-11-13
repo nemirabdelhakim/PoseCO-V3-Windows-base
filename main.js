@@ -180,44 +180,22 @@ function readJsonSheet(ws, isArray) {
 }
 function getItem(key) {
   const file = fileFor(key);
-console.log('FICHIER ENREGISTREMENTS :', file);
-console.log('FICHIER EXISTE :', fs.existsSync(file));
+
   if (!fs.existsSync(file)) return null;
 
-  // Lecture rapide des enregistrements depuis le cache JSON
-if (key === 'poseCO_records_v1') {
-  console.log('⚠ Lecture directe depuis Excel');
-}
-
-  // Lecture Excel normale si le cache est absent ou périmé
   const wb = readBook(file);
 
-if (key === 'poseCO_records_v1') {
-  const ws = wb.Sheets.Enregistrements;
+  if (key === 'poseCO_records_v1') {
+    const records = readJsonSheet(
+      wb.Sheets.Enregistrements,
+      true
+    );
 
-  console.log('Feuille Enregistrements :', !!ws);
+    console.log('📦 Enregistrements chargés :', records.length);
 
-  const rows = ws
-    ? XLSX.utils.sheet_to_json(ws, { defval: '' })
-    : [];
+    return JSON.stringify(records);
+  }
 
-  console.log('Nombre de lignes Excel :', rows.length);
-
-  const records = rows.map(function(r) {
-    try {
-      return JSON.parse(r.Donnee_JSON);
-    } catch(e) {
-      console.error('Erreur JSON ligne :', e);
-      return null;
-    }
-  }).filter(function(v) {
-    return v !== null;
-  });
-
-  console.log('Nombre de données récupérées :', records.length);
-
-  return JSON.stringify(records);
-}
   if (key === 'poseCO_mag_v1') {
     return JSON.stringify({
       entrees: readJsonSheet(wb.Sheets.Entrees, true),
@@ -242,39 +220,82 @@ if (key === 'poseCO_records_v1') {
 }
 function setItem(key, raw) {
   const file = fileFor(key);
-  console.log('📁 FICHIER :', file);
-console.log('📄 EXISTE :', fs.existsSync(file));
 
-if (key === 'poseCO_records_v1') {
-  console.log('📦 CACHE :', readRecordsCache(file));
-}
   let value;
-  try { value = JSON.parse(raw); } catch (_) { throw new Error('Données JSON invalides pour ' + key); }
-  const wb = readBook(file);
-  if (key === 'poseCO_records_v1') {
-    wb.Sheets.Enregistrements = XLSX.utils.json_to_sheet(jsonSheet(Array.isArray(value) ? value : []));
-    if (!wb.SheetNames.includes('Enregistrements')) wb.SheetNames.push('Enregistrements');
-  } else if (key === 'poseCO_mag_v1') {
-    wb.Sheets.Entrees = XLSX.utils.json_to_sheet(jsonSheet(value && Array.isArray(value.entrees) ? value.entrees : []));
-    wb.Sheets.Sorties = XLSX.utils.json_to_sheet(jsonSheet(value && Array.isArray(value.sorties) ? value.sorties : []));
-    for (const n of ['Entrees', 'Sorties']) if (!wb.SheetNames.includes(n)) wb.SheetNames.push(n);
-  } else if (key === 'poseCO_list_v1') {
-    wb.Sheets.ListeMeta = XLSX.utils.json_to_sheet([{ Cle: 'valeur', Donnee_JSON: JSON.stringify({ name: value.name || '', date: value.date || '' }) }]);
-    wb.Sheets.References = XLSX.utils.json_to_sheet(jsonSheet(Array.isArray(value.refs) ? value.refs : []));
-    for (const n of ['ListeMeta', 'References']) if (!wb.SheetNames.includes(n)) wb.SheetNames.push(n);
-  } else {
-    wb.Sheets.Parametres = XLSX.utils.json_to_sheet([{ Cle: 'valeur', Donnee_JSON: JSON.stringify(value || {}) }]);
-    if (!wb.SheetNames.includes('Parametres')) wb.SheetNames.push('Parametres');
+
+  try {
+    value = JSON.parse(raw);
+  } catch (_) {
+    throw new Error('Données JSON invalides pour ' + key);
   }
-writeBookAtomic(file, wb);
 
-// Synchroniser le cache après chaque modification
-if (key === 'poseCO_records_v1') {
-  const cacheRaw = JSON.stringify(
-    Array.isArray(value) ? value : []
-  );
+  const wb = readBook(file);
 
-  writeRecordsCache(file, cacheRaw);
+  if (key === 'poseCO_records_v1') {
+
+    if (!Array.isArray(value)) {
+      throw new Error('Liste des enregistrements invalide');
+    }
+
+    wb.Sheets.Enregistrements =
+      XLSX.utils.json_to_sheet(jsonSheet(value));
+
+    if (!wb.SheetNames.includes('Enregistrements')) {
+      wb.SheetNames.push('Enregistrements');
+    }
+
+  } else if (key === 'poseCO_mag_v1') {
+
+    wb.Sheets.Entrees = XLSX.utils.json_to_sheet(
+      jsonSheet(value && Array.isArray(value.entrees)
+        ? value.entrees : [])
+    );
+
+    wb.Sheets.Sorties = XLSX.utils.json_to_sheet(
+      jsonSheet(value && Array.isArray(value.sorties)
+        ? value.sorties : [])
+    );
+
+    for (const n of ['Entrees', 'Sorties']) {
+      if (!wb.SheetNames.includes(n)) wb.SheetNames.push(n);
+    }
+
+  } else if (key === 'poseCO_list_v1') {
+
+    wb.Sheets.ListeMeta = XLSX.utils.json_to_sheet([{
+      Cle: 'valeur',
+      Donnee_JSON: JSON.stringify({
+        name: value.name || '',
+        date: value.date || ''
+      })
+    }]);
+
+    wb.Sheets.References = XLSX.utils.json_to_sheet(
+      jsonSheet(Array.isArray(value.refs) ? value.refs : [])
+    );
+
+    for (const n of ['ListeMeta', 'References']) {
+      if (!wb.SheetNames.includes(n)) wb.SheetNames.push(n);
+    }
+
+  } else if (key === 'poseCO_settings_v1') {
+
+    wb.Sheets.Parametres = XLSX.utils.json_to_sheet([{
+      Cle: 'valeur',
+      Donnee_JSON: JSON.stringify(value || {})
+    }]);
+
+    if (!wb.SheetNames.includes('Parametres')) {
+      wb.SheetNames.push('Parametres');
+    }
+
+  } else {
+    throw new Error('Clé de stockage inconnue : ' + key);
+  }
+
+  writeBookAtomic(file, wb);
+
+  console.log('💾 Enregistrement Excel effectué :', key);
 }
 function removeItem(key) {
   const file = fileFor(key);
