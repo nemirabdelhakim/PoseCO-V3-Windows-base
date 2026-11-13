@@ -12,6 +12,8 @@ const KEY_FILES = {
 };
 const largeFile = 'PoseCO_Liste_Abonnes.xlsx';
 const largeSheet = 'BaseComplete';
+// Cache des classeurs Excel en mémoire
+const bookCache = new Map();
 
 function dataDir() {
   // Dossier réel du fichier EXE portable
@@ -33,8 +35,49 @@ function fileFor(key) {
   return path.join(dataDir(), name);
 }
 function readBook(file) {
-  if (!fs.existsSync(file)) return XLSX.utils.book_new();
-  return XLSX.readFile(file, { cellDates: true });
+  const exists = fs.existsSync(file);
+
+  if (!exists) {
+    const cached = bookCache.get(file);
+
+    if (cached && !cached.exists) {
+      return cached.wb;
+    }
+
+    const wb = XLSX.utils.book_new();
+
+    bookCache.set(file, {
+      exists: false,
+      wb: wb
+    });
+
+    return wb;
+  }
+
+  const stat = fs.statSync(file);
+  const cached = bookCache.get(file);
+
+  // Réutiliser le classeur si le fichier n'a pas changé
+  if (
+    cached &&
+    cached.exists &&
+    cached.mtimeMs === stat.mtimeMs &&
+    cached.size === stat.size
+  ) {
+    return cached.wb;
+  }
+
+  // Lecture Excel uniquement si nécessaire
+  const wb = XLSX.readFile(file, { cellDates: true });
+
+  bookCache.set(file, {
+    exists: true,
+    mtimeMs: stat.mtimeMs,
+    size: stat.size,
+    wb: wb
+  });
+
+  return wb;
 }
 function writeBookAtomic(file, wb) {
   ensureDir();
@@ -51,6 +94,15 @@ function writeBookAtomic(file, wb) {
       fs.renameSync(file, backup + '.replace'); movedOld = true;
     }
     fs.renameSync(temp, file);
+    // Actualiser le cache après écriture Excel
+const stat = fs.statSync(file);
+
+bookCache.set(file, {
+  exists: true,
+  mtimeMs: stat.mtimeMs,
+  size: stat.size,
+  wb: wb
+});
     if (movedOld && fs.existsSync(backup + '.replace')) fs.unlinkSync(backup + '.replace');
   } catch (err) {
     try { if (movedOld && !fs.existsSync(file) && fs.existsSync(backup + '.replace')) fs.renameSync(backup + '.replace', file); } catch (_) {}
@@ -112,7 +164,13 @@ function setItem(key, raw) {
 }
 function removeItem(key) {
   const file = fileFor(key);
-  if (fs.existsSync(file)) fs.unlinkSync(file);
+
+  if (fs.existsSync(file)) {
+    fs.unlinkSync(file);
+  }
+
+  // Supprimer aussi le classeur du cache
+  bookCache.delete(file);
 }
 function getLarge(key) {
   if (key !== 'listFull') return null;
