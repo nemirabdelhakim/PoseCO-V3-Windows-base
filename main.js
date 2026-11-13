@@ -56,7 +56,62 @@ function readBook(file) {
 
   const stat = fs.statSync(file);
   const cached = bookCache.get(file);
+// Cache JSON des enregistrements pour accélérer le démarrage
+function recordsCacheFile(file) {
+  return file + '.cache.json';
+}
 
+function readRecordsCache(file) {
+  const cache = recordsCacheFile(file);
+
+  if (!fs.existsSync(cache) || !fs.existsSync(file)) {
+    return null;
+  }
+
+  try {
+    const excelStat = fs.statSync(file);
+    const cacheStat = fs.statSync(cache);
+
+    // Si Excel est plus récent, reconstruire le cache
+    if (cacheStat.mtimeMs < excelStat.mtimeMs) {
+      return null;
+    }
+
+    const raw = fs.readFileSync(cache, 'utf8');
+
+    // Vérifier que le cache contient bien un tableau JSON
+    const data = JSON.parse(raw);
+
+    if (!Array.isArray(data)) return null;
+
+    return raw;
+
+  } catch (e) {
+    return null;
+  }
+}
+
+function writeRecordsCache(file, raw) {
+  const cache = recordsCacheFile(file);
+  const temp = cache + '.tmp';
+
+  try {
+    fs.writeFileSync(temp, raw, 'utf8');
+
+    if (fs.existsSync(cache)) {
+      fs.unlinkSync(cache);
+    }
+
+    fs.renameSync(temp, cache);
+
+  } catch (e) {
+    try {
+      if (fs.existsSync(temp)) fs.unlinkSync(temp);
+    } catch (_) {}
+
+    // Le cache est facultatif : Excel reste la sauvegarde principale
+  }
+}
   // Réutiliser le classeur si le fichier n'a pas changé
   if (
     cached &&
