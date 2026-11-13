@@ -1891,7 +1891,7 @@ textarea.fld{font-family:Consolas,"Courier New",monospace;font-size:13px;resize:
         for(var i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
         go(u);
       }else{
-        fetch('libs/zxing_reader.wasm').then(function(r){if(!r.ok) throw new Error('wasm');return r.arrayBuffer()}).then(function(b){go(new Uint8Array(b))}).catch(rej);
+        fetch('../libs/zxing_reader.wasm').then(function(r){if(!r.ok) throw new Error('wasm');return r.arrayBuffer()}).then(function(b){go(new Uint8Array(b))}).catch(rej);
       }
     }).catch(function(e){zxP=null;throw e});
     return zxP;
