@@ -387,7 +387,7 @@ textarea.fld{font-family:Consolas,"Courier New",monospace;font-size:13px;resize:
     try{Object.defineProperty(window,'localStorage',{configurable:true,value:__excelStorage})}catch(e){}
   }
   var KEY='poseCO_records_v1', SKEY='poseCO_settings_v1';
-  var records=[], companies=[], sel={}, editingId=null, lastPos=null, lastRef='', curNeed=false, curFlags={dup:false,inList:false}, listRefs=[], listNk=[], listLen=0, listVer=0, listQn=[], listFull=null, listKeys=new Set(), listName='', listDate='', pend=null, watchId=null, scanner=null, scanTarget=null, busy=false;
+  var records=[], recordsLoaded=false, companies=[], sel={}, editingId=null, lastPos=null, lastRef='', curNeed=false, curFlags={dup:false,inList:false}, listRefs=[], listNk=[], listLen=0, listVer=0, listQn=[], listFull=null, listKeys=new Set(), listName='', listDate='', pend=null, watchId=null, scanner=null, scanTarget=null, busy=false;
 
   /* ---------- stockage ---------- */
 
@@ -425,6 +425,7 @@ function load() {
 
         window.poseCOExcel.getRecords().then(function(data) {
             records = Array.isArray(data) ? data : [];
+          recordsLoaded = true;
 
             console.log('⏱ Chargement arrière-plan :',
                 (performance.now() - t1).toFixed(0), 'ms');
@@ -441,6 +442,22 @@ console.log('✅ Enregistrements disponibles :', records.length);
             console.error('Erreur chargement arrière-plan :', e);
         });
     }, 100);
+}
+  function persist(){
+    if (!recordsLoaded) {
+        toast('Veuillez attendre le chargement des données');
+        return;
+    }
+
+    magCache=null;
+    magStatsCache=null;
+    rmCache=null;
+
+    try {
+        localStorage.setItem(KEY, JSON.stringify(records));
+    } catch(e) {
+        toast('Stockage indisponible : exportez avant de quitter');
+    }
 }
   function persist(){magCache=null;magStatsCache=null;rmCache=null;try{localStorage.setItem(KEY,JSON.stringify(records))}catch(e){toast('Stockage indisponible : exportez avant de quitter')}}
   function saveSettings(){try{localStorage.setItem(SKEY,JSON.stringify({rx:$('rx').value,chain:$('chain').checked,companies:companies,ent:$('ent').value,gps:$('gpsOn').checked}))}catch(e){}}
@@ -475,7 +492,7 @@ console.log('✅ Enregistrements disponibles :', records.length);
     var r=$('ref').value.trim(), a=$('c1').value.trim(), b=$('c2').value.trim();
     $('stRef').innerHTML=r?'<span class="ok">✔</span>':''; $('stC1').innerHTML=a?'<span class="ok">✔</span>':''; $('stC2').innerHTML=b?'<span class="ok">✔</span>':'';
     var dup=a&&b&&a===b;
-    var e=$('ent').value.trim(); $('save').disabled=!(r&&a&&b&&e)||dup||(curNeed&&!$('okManual').checked); $('savePrint').disabled=$('save').disabled;
+    var e=$('ent').value.trim(); $('save').disabled=!recordsLoaded||!(r&&a&&b&&e)||dup||(curNeed&&!$('okManual').checked); $('savePrint').disabled=$('save').disabled;
     $('save').textContent=dup?'Les deux codes sont identiques':(!e?'Renseignez l\'entreprise':(curNeed&&!$('okManual').checked?'Confirmation manuelle requise':(editingId?'Mettre à jour':'Enregistrer')));
     $('count').textContent=records.length+' enreg.';
   }
@@ -731,41 +748,89 @@ console.log('✅ Enregistrements disponibles :', records.length);
   }
   function buildKeys(){listNk=listRefs.map(nk);listKeys=new Set(listNk);listLen=listRefs.length?domLen():0;listVer++;listQn=listRefs.map(function(v){return qNorm(v)})}
 
-function loadList(){
+
+function loadList() {
     var t0 = performance.now();
-    var t1;
 
-    try {
-        var o = JSON.parse(localStorage.getItem(LKEY) || 'null');
-        if(o && o.refs){
-            listRefs = o.refs;
-            listName = o.name || '';
-            listDate = o.date || '';
+    function appliquerListe(o) {
+        o = o || {};
+
+        listRefs = Array.isArray(o.refs) ? o.refs : [];
+        listName = o.name || '';
+        listDate = o.date || '';
+
+        console.log(
+            '1. Lecture liste en arrière-plan :',
+            (performance.now() - t0).toFixed(0),
+            'ms'
+        );
+
+        var t1 = performance.now();
+
+        buildKeys();
+
+        console.log(
+            '2. buildKeys :',
+            (performance.now() - t1).toFixed(0),
+            'ms'
+        );
+
+        t1 = performance.now();
+
+        idbGet('listFull').then(function(v) {
+            console.log(
+                '3. idbGet listFull :',
+                (performance.now() - t1).toFixed(0),
+                'ms'
+            );
+
+            if (v && v.name === listName &&
+                v.date === listDate && v.rows) {
+
+                listFull = v;
+
+                var t2 = performance.now();
+                renderLst();
+
+                console.log(
+                    '4. renderLst :',
+                    (performance.now() - t2).toFixed(0),
+                    'ms'
+                );
+            }
+        }).catch(function(e) {
+            console.error('Erreur listFull :', e);
+        });
+
+    }
+
+    // Windows Electron : lecture Excel asynchrone
+    if (window.poseCOExcel && window.poseCOExcel.getList) {
+        setTimeout(function() {
+            window.poseCOExcel.getList()
+                .then(appliquerListe)
+                .catch(function(e) {
+                    console.error(
+                        'Erreur chargement liste abonnés :',
+                        e
+                    );
+                });
+        }, 100);
+
+    } else {
+        // Conservation du fonctionnement dans le navigateur
+        try {
+            var o = JSON.parse(
+                localStorage.getItem(LKEY) || 'null'
+            );
+            appliquerListe(o);
+        } catch(e) {
+            console.error('Erreur lecture liste :', e);
+            appliquerListe(null);
         }
-    } catch(e){}
-
-    console.log('1. Lecture liste :', (performance.now()-t0).toFixed(0), 'ms');
-
-    t1 = performance.now();
-    buildKeys();
-    console.log('2. buildKeys :', (performance.now()-t1).toFixed(0), 'ms');
-
-    t1 = performance.now();
-
-    idbGet('listFull').then(function(v){
-        console.log('3. idbGet listFull :', (performance.now()-t1).toFixed(0), 'ms');
-
-        if(v && v.name===listName && v.date===listDate && v.rows){
-            listFull = v;
-
-            var t2 = performance.now();
-            renderLst();
-            console.log('4. renderLst :', (performance.now()-t2).toFixed(0), 'ms');
-        }
-    }).catch(function(e){
-        console.error('Erreur listFull :', e);
-    });
+    }
 }
+
   function saveList(){
     try{localStorage.setItem(LKEY,JSON.stringify({name:listName,date:listDate,refs:listRefs}))}catch(e){toast('Liste trop grande pour le stockage')}
   }
