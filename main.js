@@ -185,28 +185,39 @@ console.log('FICHIER EXISTE :', fs.existsSync(file));
   if (!fs.existsSync(file)) return null;
 
   // Lecture rapide des enregistrements depuis le cache JSON
-  if (key === 'poseCO_records_v1') {
-    const cached = readRecordsCache(file);
-
-    if (cached !== null) {
-      return cached;
-    }
-  }
+if (key === 'poseCO_records_v1') {
+  console.log('⚠ Lecture directe depuis Excel');
+}
 
   // Lecture Excel normale si le cache est absent ou périmé
   const wb = readBook(file);
 
-  if (key === 'poseCO_records_v1') {
-    const raw = JSON.stringify(
-      readJsonSheet(wb.Sheets.Enregistrements, true)
-    );
+if (key === 'poseCO_records_v1') {
+  const ws = wb.Sheets.Enregistrements;
 
-    // Création automatique du cache
-    writeRecordsCache(file, raw);
+  console.log('Feuille Enregistrements :', !!ws);
 
-    return raw;
-  }
+  const rows = ws
+    ? XLSX.utils.sheet_to_json(ws, { defval: '' })
+    : [];
 
+  console.log('Nombre de lignes Excel :', rows.length);
+
+  const records = rows.map(function(r) {
+    try {
+      return JSON.parse(r.Donnee_JSON);
+    } catch(e) {
+      console.error('Erreur JSON ligne :', e);
+      return null;
+    }
+  }).filter(function(v) {
+    return v !== null;
+  });
+
+  console.log('Nombre de données récupérées :', records.length);
+
+  return JSON.stringify(records);
+}
   if (key === 'poseCO_mag_v1') {
     return JSON.stringify({
       entrees: readJsonSheet(wb.Sheets.Entrees, true),
@@ -231,6 +242,12 @@ console.log('FICHIER EXISTE :', fs.existsSync(file));
 }
 function setItem(key, raw) {
   const file = fileFor(key);
+  console.log('📁 FICHIER :', file);
+console.log('📄 EXISTE :', fs.existsSync(file));
+
+if (key === 'poseCO_records_v1') {
+  console.log('📦 CACHE :', readRecordsCache(file));
+}
   let value;
   try { value = JSON.parse(raw); } catch (_) { throw new Error('Données JSON invalides pour ' + key); }
   const wb = readBook(file);
