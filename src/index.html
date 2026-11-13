@@ -2095,8 +2095,12 @@ function zxInit(){
   $('tabQ').addEventListener('click',function(){qDel=null; showTab('q'); try{$('sQ').focus()}catch(e){}});
   $('tabMag').addEventListener('click',function(){magDel=''; showTab('mag')});
 
-  load(); loadList(); magLoad(); renderCompanies(); refresh(); startWatch();
-  setTimeout(function(){try{if(mag.entrees.length||mag.sorties.length) magBuild(null)}catch(e){}},1200);
+load();
+loadList();
+magLoad();
+renderCompanies();
+refresh();
+startWatch();
 })();
 </script>
 </body>
