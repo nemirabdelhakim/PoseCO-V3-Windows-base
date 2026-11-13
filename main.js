@@ -180,7 +180,8 @@ function readJsonSheet(ws, isArray) {
 }
 function getItem(key) {
   const file = fileFor(key);
-
+console.log('FICHIER ENREGISTREMENTS :', file);
+console.log('FICHIER EXISTE :', fs.existsSync(file));
   if (!fs.existsSync(file)) return null;
 
   // Lecture rapide des enregistrements depuis le cache JSON
