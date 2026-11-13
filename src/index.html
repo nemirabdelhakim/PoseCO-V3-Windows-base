@@ -683,11 +683,42 @@ textarea.fld{font-family:Consolas,"Courier New",monospace;font-size:13px;resize:
     return String(v==null?'':v).replace(/[\s\u00a0]+/g,'');
   }
   function buildKeys(){listNk=listRefs.map(nk);listKeys=new Set(listNk);listLen=listRefs.length?domLen():0;listVer++;listQn=listRefs.map(function(v){return qNorm(v)})}
-  function loadList(){
-    try{var o=JSON.parse(localStorage.getItem(LKEY)||'null'); if(o&&o.refs){listRefs=o.refs;listName=o.name||'';listDate=o.date||''}}catch(e){}
+
+function loadList(){
+    var t0 = performance.now();
+    var t1;
+
+    try {
+        var o = JSON.parse(localStorage.getItem(LKEY) || 'null');
+        if(o && o.refs){
+            listRefs = o.refs;
+            listName = o.name || '';
+            listDate = o.date || '';
+        }
+    } catch(e){}
+
+    console.log('1. Lecture liste :', (performance.now()-t0).toFixed(0), 'ms');
+
+    t1 = performance.now();
     buildKeys();
-    idbGet('listFull').then(function(v){if(v&&v.name===listName&&v.date===listDate&&v.rows){listFull=v;renderLst()}}).catch(function(){});
-  }
+    console.log('2. buildKeys :', (performance.now()-t1).toFixed(0), 'ms');
+
+    t1 = performance.now();
+
+    idbGet('listFull').then(function(v){
+        console.log('3. idbGet listFull :', (performance.now()-t1).toFixed(0), 'ms');
+
+        if(v && v.name===listName && v.date===listDate && v.rows){
+            listFull = v;
+
+            var t2 = performance.now();
+            renderLst();
+            console.log('4. renderLst :', (performance.now()-t2).toFixed(0), 'ms');
+        }
+    }).catch(function(e){
+        console.error('Erreur listFull :', e);
+    });
+}
   function saveList(){
     try{localStorage.setItem(LKEY,JSON.stringify({name:listName,date:listDate,refs:listRefs}))}catch(e){toast('Liste trop grande pour le stockage')}
   }
